@@ -107,6 +107,9 @@ var initCmd = &cobra.Command{
 		case "stress":
 			content = config.StressTemplate
 			defaultName = "stress_test.yaml"
+		case "patterns":
+			content = config.PatternsTemplate
+			defaultName = "patterns_test.yaml"
 		default:
 			log.Fatalf("unknown template: %s", tmpl)
 		}

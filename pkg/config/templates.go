@@ -15,20 +15,20 @@ execution:
   cooldown_duration: "3s"
 
 topics:
-  - name: "/default/test"
+  - name: "/default/load_simple_test"
     partitions: 0
     dispatch_strategy: "non_reliable"
 
 producers:
   - name: "test_producers"
-    topic: "/default/test"
+    topic: "/default/load_simple_test"
     count: 3
     rate_per_second: 50
     message_size: 256
 
 consumers:
   - name: "test_consumers"
-    topic: "/default/test"
+    topic: "/default/load_simple_test"
     subscription: "sub_shared"
     subscription_type: "shared"
     count: 3
@@ -55,7 +55,7 @@ danube:
   service_url: "127.0.0.1:6650"
 
 execution:
-  duration: "5m"
+  duration: "3m"
   warmup_duration: "10s"
   cooldown_duration: "5s"
 
@@ -126,4 +126,121 @@ metrics:
     - producer_latency
     - message_loss
     - error_rates
+`
+
+const PatternsTemplate = `# Test configuration
+test_name: "patterns_test"
+description: "Covers multiple topic patterns: partitions, schemas, and subscription mixes"
+
+danube:
+  service_url: "127.0.0.1:6650"
+
+execution:
+  duration: "2m"
+  warmup_duration: "5s"
+  cooldown_duration: "3s"
+
+topics:
+  - name: "/default/pattern_1"
+    partitions: 0
+    dispatch_strategy: "non_reliable"
+    schema:
+      type: "number"
+
+  - name: "/default/pattern_2"
+    partitions: 3
+    dispatch_strategy: "non_reliable"
+    schema:
+      type: "json_schema"
+      definition: |
+        {"type":"object","properties":{"seq":{"type":"integer"},"msg":{"type":"string"}},"required":["seq","msg"]}
+
+  - name: "/default/pattern_3"
+    partitions: 0
+    dispatch_strategy: "reliable"
+
+  - name: "/default/pattern_4"
+    partitions: 3
+    dispatch_strategy: "reliable"
+
+  - name: "/default/pattern_5"
+    partitions: 3
+    dispatch_strategy: "reliable"
+
+producers:
+  - name: "pattern_1_prod"
+    topic: "/default/pattern_1"
+    count: 1
+    rate_per_second: 20
+    message_size: 32
+
+  - name: "pattern_2_prod"
+    topic: "/default/pattern_2"
+    count: 2
+    rate_per_second: 15
+    message_size: 256
+
+  - name: "pattern_3_prod"
+    topic: "/default/pattern_3"
+    count: 1
+    rate_per_second: 20
+    message_size: 128
+
+  - name: "pattern_4_prod"
+    topic: "/default/pattern_4"
+    count: 1
+    rate_per_second: 20
+    message_size: 128
+
+  - name: "pattern_5_prod"
+    topic: "/default/pattern_5"
+    count: 2
+    rate_per_second: 15
+    message_size: 128
+
+consumers:
+  - name: "c_pattern_1_shared"
+    topic: "/default/pattern_1"
+    subscription: "s_pattern_1_shared_1"
+    subscription_type: "shared"
+    count: 2
+  - name: "c_pattern_1_excl_1"
+    topic: "/default/pattern_1"
+    subscription: "s_pattern_1_excl_1"
+    subscription_type: "exclusive"
+    count: 1
+
+  - name: "c_pattern_2_shared"
+    topic: "/default/pattern_2"
+    subscription: "s_pattern_2_shared_1"
+    subscription_type: "shared"
+    count: 3
+
+  - name: "c_pattern_3_shared"
+    topic: "/default/pattern_3"
+    subscription: "s_pattern_3_shared_1"
+    subscription_type: "shared"
+    count: 2
+  - name: "c_pattern_3_excl_1"
+    topic: "/default/pattern_3"
+    subscription: "s_pattern_3_excl_1"
+    subscription_type: "exclusive"
+    count: 1
+
+  - name: "c_pattern_4_shared"
+    topic: "/default/pattern_4"
+    subscription: "s_pattern_4_shared_1"
+    subscription_type: "shared"
+    count: 3
+
+  - name: "c_pattern_5_shared"
+    topic: "/default/pattern_5"
+    subscription: "s_pattern_5_shared_1"
+    subscription_type: "shared"
+    count: 2
+  - name: "c_pattern_5_excl_1"
+    topic: "/default/pattern_5"
+    subscription: "s_pattern_5_excl_1"
+    subscription_type: "exclusive"
+    count: 1
 `

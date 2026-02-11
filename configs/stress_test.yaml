@@ -6,7 +6,7 @@ danube:
   service_url: "127.0.0.1:6650"
 
 execution:
-  duration: "5m"
+  duration: "3m"
   warmup_duration: "10s"
   cooldown_duration: "5s"
 

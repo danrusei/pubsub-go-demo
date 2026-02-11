@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -28,15 +29,40 @@ func NewPool(serviceURL string, cfg *config.Config, m *metrics.Collector) *Pool 
 }
 
 // Start launches producer workers for all producer groups in the config.
-// It returns a function to stop all workers (by canceling the given context).
 func (p *Pool) Start(ctx context.Context, wg *sync.WaitGroup) {
+	// Single shared client for schema registration and all producers.
+	client, err := danube.NewClient().ServiceURL(p.serviceURL).Build()
+	if err != nil {
+		log.Printf("client build error: %v", err)
+		return
+	}
+
+	// Pre-register schemas once per topic (before launching workers).
+	registered := map[string]bool{}
+	for _, pg := range p.cfg.Producers {
+		topicCfg := p.findTopic(pg.Topic)
+		if topicCfg == nil || topicCfg.Schema == nil || !topicCfg.Schema.NeedsRegistration() {
+			continue
+		}
+		subject := topicCfg.SchemaSubject()
+		if registered[subject] {
+			continue
+		}
+		if err := registerSchema(ctx, client, topicCfg); err != nil {
+			log.Printf("schema register error for %s: %v", subject, err)
+			continue
+		}
+		log.Printf("schema registered: subject=%s type=%s", subject, topicCfg.Schema.Type)
+		registered[subject] = true
+	}
+
 	for _, pg := range p.cfg.Producers {
 		topicCfg := p.findTopic(pg.Topic)
 		for i := 0; i < pg.Count; i++ {
 			wg.Add(1)
 			go func(group config.ProducerGroup, tc *config.Topic, workerIdx int) {
 				defer wg.Done()
-				p.runWorker(ctx, group, tc, workerIdx)
+				p.runWorker(ctx, client, group, tc, workerIdx)
 			}(pg, topicCfg, i)
 		}
 	}
@@ -51,26 +77,12 @@ func (p *Pool) findTopic(name string) *config.Topic {
 	return nil
 }
 
-func (p *Pool) runWorker(ctx context.Context, pg config.ProducerGroup, topicCfg *config.Topic, idx int) {
+func (p *Pool) runWorker(ctx context.Context, client *danube.DanubeClient, pg config.ProducerGroup, topicCfg *config.Topic, idx int) {
 	baseName := pg.Name
 	if baseName == "" {
 		baseName = "producer"
 	}
 	prodName := fmt.Sprintf("%s-%d", baseName, idx)
-
-	client, err := danube.NewClient().ServiceURL(p.serviceURL).Build()
-	if err != nil {
-		log.Printf("client build error: %v", err)
-		p.metrics.IncError(1)
-		return
-	}
-
-	// Register schema if the topic has one configured (first worker wins; duplicates are idempotent).
-	if topicCfg != nil && topicCfg.Schema != nil {
-		if err := registerSchema(ctx, client, topicCfg); err != nil {
-			log.Printf("schema register warning (may already exist): %v", err)
-		}
-	}
 
 	builder := client.NewProducer().
 		WithName(prodName).
@@ -79,9 +91,6 @@ func (p *Pool) runWorker(ctx context.Context, pg config.ProducerGroup, topicCfg 
 	if topicCfg != nil {
 		if topicCfg.Partitions > 0 {
 			builder = builder.WithPartitions(int32(topicCfg.Partitions))
-		}
-		if topicCfg.Schema != nil {
-			builder = builder.WithSchemaSubject(topicCfg.SchemaSubject())
 		}
 		if topicCfg.DispatchStrategy == "reliable" {
 			builder = builder.WithDispatchStrategy(danube.NewReliableDispatchStrategy())
@@ -149,7 +158,7 @@ func registerSchema(ctx context.Context, client *danube.DanubeClient, topicCfg *
 		WithType(schemaType).
 		WithDescription("loadtest auto-registered")
 	if topicCfg.Schema.Definition != "" {
-		builder = builder.WithSchemaData([]byte(topicCfg.Schema.Definition))
+		builder = builder.WithSchemaData([]byte(strings.TrimSpace(topicCfg.Schema.Definition)))
 	}
 	_, err = builder.Execute(ctx)
 	return err

@@ -66,6 +66,18 @@ func (t *Topic) SchemaSubject() string {
 	return t.Name + "-value"
 }
 
+// NeedsRegistration returns true if the schema type requires registry registration
+// (i.e. has a structured definition). Simple types like string/number/bytes are
+// only payload hints for the workload generator and don't use the schema registry.
+func (s *SchemaConfig) NeedsRegistration() bool {
+	switch s.Type {
+	case "json_schema", "avro", "protobuf":
+		return true
+	default:
+		return false
+	}
+}
+
 type ProducerGroup struct {
 	Name          string `yaml:"name"`
 	Topic         string `yaml:"topic"`
