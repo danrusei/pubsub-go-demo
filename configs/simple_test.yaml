@@ -13,7 +13,6 @@ execution:
 topics:
   - name: "/default/load_simple_test"
     partitions: 0
-    schema_type: "string"
     dispatch_strategy: "non_reliable"
 
 producers:

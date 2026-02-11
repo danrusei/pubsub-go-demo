@@ -17,7 +17,7 @@ execution:
 topics:
   - name: "/default/test"
     partitions: 0
-    schema_type: "string"
+    dispatch_strategy: "non_reliable"
 
 producers:
   - name: "test_producers"
@@ -62,15 +62,17 @@ execution:
 topics:
   - name: "/default/orders"
     partitions: 3
-    schema_type: "json"
-    json_schema: |
-      {"type":"object","properties":{"order_id":{"type":"string"},"amount":{"type":"number"},"ts":{"type":"integer"}},"required":["order_id","amount"]}
+    dispatch_strategy: "reliable"
+    schema:
+      type: "json_schema"
+      definition: |
+        {"type":"object","properties":{"order_id":{"type":"string"},"amount":{"type":"number"},"ts":{"type":"integer"}},"required":["order_id","amount"]}
   - name: "/default/events"
     partitions: 1
-    schema_type: "string"
+    dispatch_strategy: "non_reliable"
   - name: "/default/metrics"
     partitions: 0
-    schema_type: "int64"
+    dispatch_strategy: "non_reliable"
 
 producers:
   - name: "order_producers"

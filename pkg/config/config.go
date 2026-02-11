@@ -28,11 +28,42 @@ type ExecutionConfig struct {
 }
 
 type Topic struct {
-	Name             string `yaml:"name"`
-	Partitions       int    `yaml:"partitions"`  // 0 or omitted means non-partitioned
-	SchemaType       string `yaml:"schema_type"` // json|string|int64|number
-	JSONSchema       string `yaml:"json_schema,omitempty"`
-	DispatchStrategy string `yaml:"dispatch_strategy,omitempty"` // reliable|non_reliable (default non_reliable)
+	Name             string        `yaml:"name"`
+	Partitions       int           `yaml:"partitions"`                  // 0 or omitted means non-partitioned
+	DispatchStrategy string        `yaml:"dispatch_strategy,omitempty"` // reliable|non_reliable (default non_reliable)
+	Schema           *SchemaConfig `yaml:"schema,omitempty"`            // optional schema registry config
+}
+
+// SchemaConfig describes a schema to register and attach to the producer.
+type SchemaConfig struct {
+	Subject    string `yaml:"subject,omitempty"`    // schema registry subject; defaults to "<topic>-value"
+	Type       string `yaml:"type"`                 // json_schema|string|number|bytes|avro|protobuf
+	Definition string `yaml:"definition,omitempty"` // required for json_schema|avro|protobuf
+}
+
+// PayloadType returns the workload generator key derived from the schema config.
+func (t *Topic) PayloadType() string {
+	if t.Schema == nil {
+		return "string"
+	}
+	switch t.Schema.Type {
+	case "json_schema":
+		return "json"
+	case "number":
+		return "number"
+	case "string", "bytes", "":
+		return "string"
+	default:
+		return "string"
+	}
+}
+
+// SchemaSubject returns the subject name, defaulting to "<topic>-value".
+func (t *Topic) SchemaSubject() string {
+	if t.Schema != nil && t.Schema.Subject != "" {
+		return t.Schema.Subject
+	}
+	return t.Name + "-value"
 }
 
 type ProducerGroup struct {

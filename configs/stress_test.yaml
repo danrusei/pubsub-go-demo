@@ -13,17 +13,16 @@ execution:
 topics:
   - name: "/default/orders"
     partitions: 3
-    schema_type: "json"
     dispatch_strategy: "reliable"
-    json_schema: |
-      {"type":"object","properties":{"order_id":{"type":"string"},"amount":{"type":"number"},"ts":{"type":"integer"}},"required":["order_id","amount"]}
+    schema:
+      type: "json_schema"
+      definition: |
+        {"type":"object","properties":{"order_id":{"type":"string"},"amount":{"type":"number"},"ts":{"type":"integer"}},"required":["order_id","amount"]}
   - name: "/default/events"
     partitions: 1
-    schema_type: "string"
     dispatch_strategy: "non_reliable"
   - name: "/default/metrics"
     partitions: 0
-    schema_type: "int64"
     dispatch_strategy: "non_reliable"
 
 producers:

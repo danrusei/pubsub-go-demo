@@ -21,29 +21,28 @@ execution:
 topics:
   - name: "/default/pattern_1"
     partitions: 0
-    schema_type: "int64"
     dispatch_strategy: "non_reliable"
+    schema:
+      type: "number"
 
   - name: "/default/pattern_2"
     partitions: 3
-    schema_type: "json"
     dispatch_strategy: "non_reliable"
-    json_schema: |
-      {"type":"object","properties":{"seq":{"type":"integer"},"msg":{"type":"string"}},"required":["seq","msg"]}
+    schema:
+      type: "json_schema"
+      definition: |
+        {"type":"object","properties":{"seq":{"type":"integer"},"msg":{"type":"string"}},"required":["seq","msg"]}
 
   - name: "/default/pattern_3"
     partitions: 0
-    schema_type: "string"
     dispatch_strategy: "reliable"
 
   - name: "/default/pattern_4"
     partitions: 3
-    schema_type: "string"
     dispatch_strategy: "reliable"
 
   - name: "/default/pattern_5"
     partitions: 3
-    schema_type: "string"
     dispatch_strategy: "reliable"
 
 # Producers

@@ -41,13 +41,18 @@ func (p *Pool) Start(ctx context.Context, wg *sync.WaitGroup) {
 func (p *Pool) runWorker(ctx context.Context, cg config.ConsumerGroup, idx int) {
 	subType := mapSubType(cg.SubscriptionType)
 
-	client := danube.NewClient().ServiceURL(p.serviceURL).Build()
+	client, err := danube.NewClient().ServiceURL(p.serviceURL).Build()
+	if err != nil {
+		log.Printf("client build error: %v", err)
+		p.metrics.IncError(1)
+		return
+	}
 	baseName := cg.Name
 	if baseName == "" {
 		baseName = "consumer"
 	}
 	consName := fmt.Sprintf("%s-%d", baseName, idx)
-	builder := client.NewConsumer(ctx).
+	builder := client.NewConsumer().
 		WithConsumerName(consName).
 		WithTopic(cg.Topic).
 		WithSubscription(cg.Subscription).

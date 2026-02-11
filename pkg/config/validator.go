@@ -18,24 +18,27 @@ func Validate(cfg *Config) []error {
 		errs = append(errs, fmt.Errorf("execution.duration is required"))
 	}
 
-	// Topics must have valid schema types
-	allowedSchemas := map[string]bool{"json": true, "string": true, "int64": true, "number": true}
+	// Topics
 	allowedDispatch := map[string]bool{"": true, "non_reliable": true, "reliable": true}
+	allowedSchemaTypes := map[string]bool{"json_schema": true, "string": true, "number": true, "bytes": true, "avro": true, "protobuf": true}
+	needsDefinition := map[string]bool{"json_schema": true, "avro": true, "protobuf": true}
 	for i, t := range cfg.Topics {
 		if t.Name == "" {
 			errs = append(errs, fmt.Errorf("topics[%d].name is required", i))
-		}
-		if !allowedSchemas[t.SchemaType] {
-			errs = append(errs, fmt.Errorf("topics[%d].schema_type must be one of json|string|int64|number", i))
-		}
-		if t.SchemaType == "json" && t.JSONSchema == "" {
-			errs = append(errs, fmt.Errorf("topics[%d].json_schema is required when schema_type=json", i))
 		}
 		if t.Partitions < 0 {
 			errs = append(errs, fmt.Errorf("topics[%d].partitions must be >= 0", i))
 		}
 		if !allowedDispatch[t.DispatchStrategy] {
 			errs = append(errs, fmt.Errorf("topics[%d].dispatch_strategy must be one of reliable|non_reliable (or omitted)", i))
+		}
+		if s := t.Schema; s != nil {
+			if !allowedSchemaTypes[s.Type] {
+				errs = append(errs, fmt.Errorf("topics[%d].schema.type must be one of json_schema|string|number|bytes|avro|protobuf", i))
+			}
+			if needsDefinition[s.Type] && s.Definition == "" {
+				errs = append(errs, fmt.Errorf("topics[%d].schema.definition is required for type=%s", i, s.Type))
+			}
 		}
 	}
 
